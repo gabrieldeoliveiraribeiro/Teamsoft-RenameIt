@@ -57,12 +57,12 @@ function getCompetenciaFromDate(dateStr) {
     return null;
 }
 
-// Preencher competência padrão e data de emissão
+// Preencher competência padrão e data da competência
 function initCompetencia() {
     const defaultComp = getDefaultCompetencia();
     nfCompetencia.value = defaultComp;
     boletoCompetencia.value = defaultComp;
-    // Preencher data de emissão com último dia do mês anterior
+    // Preencher data da competência com último dia do mês anterior
     nfDataEmissao.value = getLastDayOfPreviousMonth();
 }
 
@@ -72,11 +72,11 @@ nfCompetencia.addEventListener('input', () => {
     updateBoletoPreview();
 });
 
-// Função para atualizar competência baseada na data de emissão
+// Função para atualizar competência (mes/YY) baseada na data da competência (dd/mm/aaaa)
 function atualizarCompetenciaDaData() {
-    const dataEmissao = nfDataEmissao.value.trim();
-    if (dataEmissao) {
-        const competencia = getCompetenciaFromDate(dataEmissao);
+    const dataCompetencia = nfDataEmissao.value.trim();
+    if (dataCompetencia) {
+        const competencia = getCompetenciaFromDate(dataCompetencia);
         if (competencia) {
             nfCompetencia.value = competencia;
             boletoCompetencia.value = competencia;
@@ -87,10 +87,10 @@ function atualizarCompetenciaDaData() {
     }
 }
 
-// Quando a data de emissão mudar e perder o foco, atualizar competência do boleto
+// Quando a data da competência mudar e perder o foco, atualizar competência (mes/YY)
 nfDataEmissao.addEventListener('blur', atualizarCompetenciaDaData);
 
-// Quando pressionar Enter no campo de data de emissão, atualizar competência
+// Quando pressionar Enter no campo de data da competência, atualizar competência (mes/YY)
 nfDataEmissao.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault(); // Prevenir comportamento padrão do Enter
@@ -201,8 +201,111 @@ nfFile.addEventListener('change', () => {
     updateNFPreview();
 });
 
-nfXmlFile.addEventListener('change', () => {
-    updateNFPreview();
+// Extrair informações do XML da NF
+async function extractDataFromXML(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const xmlText = e.target.result;
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                // Verificar se há erros de parsing
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    reject(new Error('Erro ao fazer parse do XML'));
+                    return;
+                }
+                
+                // Extrair dados do XML
+                // O XML tem namespace, então precisamos usar getElementsByTagName ou querySelector com namespace
+                const nNFSe = xmlDoc.getElementsByTagName('nNFSe')[0]?.textContent;
+                const dCompet = xmlDoc.getElementsByTagName('dCompet')[0]?.textContent;
+                const vServ = xmlDoc.getElementsByTagName('vServ')[0]?.textContent;
+                const vLiq = xmlDoc.getElementsByTagName('vLiq')[0]?.textContent;
+                
+                // Converter data de competência de YYYY-MM-DD para dd/mm/aaaa (para o campo de data)
+                let dataCompetencia = null;
+                let competencia = null;
+                if (dCompet) {
+                    const dateParts = dCompet.split('-');
+                    if (dateParts.length === 3) {
+                        // Converter para dd/mm/aaaa
+                        const dia = dateParts[2].padStart(2, '0');
+                        const mes = dateParts[1].padStart(2, '0');
+                        const ano = dateParts[0];
+                        dataCompetencia = `${dia}/${mes}/${ano}`;
+                        
+                        // Também converter para mes/YY (para o campo de competência)
+                        const anoInt = parseInt(dateParts[0]);
+                        const mesInt = parseInt(dateParts[1]);
+                        const mesAbrev = meses[mesInt];
+                        const anoAbrev = anoInt.toString().slice(-2);
+                        competencia = `${mesAbrev}/${anoAbrev}`;
+                    }
+                }
+                
+                // Usar vLiq se disponível, senão vServ
+                const valor = vLiq || vServ;
+                
+                resolve({
+                    numero: nNFSe,
+                    competencia: competencia,
+                    dataCompetencia: dataCompetencia,
+                    valor: valor ? parseFloat(valor).toFixed(2).replace('.', ',') : null
+                });
+            } catch (error) {
+                reject(error);
+            }
+        };
+        
+        reader.onerror = () => reject(new Error('Erro ao ler arquivo XML'));
+        reader.readAsText(file);
+    });
+}
+
+nfXmlFile.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    showMessage('Processando XML da NF...', 'info');
+    
+    try {
+        const data = await extractDataFromXML(file);
+        
+        // Preencher todos os campos, substituindo valores existentes
+        if (data.numero) {
+            nfNumero.value = data.numero;
+        }
+        
+        // Preencher data da competência (dd/mm/aaaa)
+        if (data.dataCompetencia) {
+            nfDataEmissao.value = data.dataCompetencia;
+        }
+        
+        // Preencher competência (mes/YY)
+        if (data.competencia) {
+            nfCompetencia.value = data.competencia;
+            boletoCompetencia.value = data.competencia;
+        } else if (data.dataCompetencia) {
+            // Se não tem competência mes/YY mas tem data, calcular da data
+            atualizarCompetenciaDaData();
+        }
+        
+        if (data.valor) {
+            nfValor.value = data.valor;
+            boletoValor.value = data.valor;
+        }
+        
+        showMessage('Dados extraídos do XML com sucesso! Revise os campos.', 'success');
+        updateNFPreview();
+        updateBoletoPreview();
+    } catch (error) {
+        console.error('Erro ao processar XML:', error);
+        showMessage('Não foi possível extrair dados do XML. Preencha os campos manualmente.', 'warning');
+    }
 });
 
 // Atualizar preview do boleto quando arquivo for selecionado
@@ -247,17 +350,17 @@ function formatarCompetencia(competencia) {
 // Atualizar preview da NF
 function updateNFPreview() {
     const numero = nfNumero.value.trim();
-    const dataEmissao = nfDataEmissao.value.trim();
+    const dataCompetencia = nfDataEmissao.value.trim();
     const competencia = formatarCompetencia(nfCompetencia.value);
     const valor = formatarValor(nfValor.value);
     
-    if (!numero || !dataEmissao || !competencia || !valor) {
+    if (!numero || !dataCompetencia || !competencia || !valor) {
         nfPreview.textContent = '-';
         return;
     }
     
     // Converter data de dd/mm/aaaa para dd.mm.aaaa
-    const dataFormatada = dataEmissao.replace(/\//g, '.');
+    const dataFormatada = dataCompetencia.replace(/\//g, '.');
     
     const nome = `${valor} - NF Nº ${numero} ${dataFormatada} - Ref ${competencia}`;
     nfPreview.textContent = nome + '.pdf';
@@ -362,42 +465,28 @@ convertBtn.addEventListener('click', async () => {
         return;
     }
     
-    // Baixar NF PDF
-    if (hasNF) {
-        const file = nfFile.files[0];
-        const numero = nfNumero.value.trim();
-        const dataEmissao = nfDataEmissao.value.trim().replace(/\//g, '.');
-        const competencia = formatarCompetencia(nfCompetencia.value);
-        const valor = formatarValor(nfValor.value);
-        
-        const nomeArquivo = `${valor} - NF Nº ${numero} ${dataEmissao} - Ref ${competencia}.pdf`;
-        downloadFile(file, nomeArquivo);
-        showMessage(`Nota Fiscal PDF baixada: ${nomeArquivo}`, 'success');
-    }
+    // Ordem de download: 1. NF PDF, 2. Boleto, 3. XML
+    let delayAcumulado = 0;
     
-    // Baixar NF XML (com delay se também houver PDF)
-    if (hasNFXml) {
-        const downloadNFXml = () => {
-            const file = nfXmlFile.files[0];
+    // 1. Baixar NF PDF (primeiro)
+    if (hasNF) {
+        const downloadNF = () => {
+            const file = nfFile.files[0];
             const numero = nfNumero.value.trim();
-            const dataEmissao = nfDataEmissao.value.trim().replace(/\//g, '.');
+            const dataCompetencia = nfDataEmissao.value.trim().replace(/\//g, '.');
             const competencia = formatarCompetencia(nfCompetencia.value);
             const valor = formatarValor(nfValor.value);
             
-            const nomeArquivo = `${valor} - NF Nº ${numero} ${dataEmissao} - Ref ${competencia}.xml`;
+            const nomeArquivo = `${valor} - NF Nº ${numero} ${dataCompetencia} - Ref ${competencia}.pdf`;
             downloadFile(file, nomeArquivo);
-            showMessage(`Nota Fiscal XML baixada: ${nomeArquivo}`, 'success');
+            showMessage(`Nota Fiscal PDF baixada: ${nomeArquivo}`, 'success');
         };
         
-        // Se também baixou PDF, adicionar delay de 500ms
-        if (hasNF) {
-            setTimeout(downloadNFXml, 500);
-        } else {
-            downloadNFXml();
-        }
+        downloadNF();
+        delayAcumulado = 600; // Delay para próximo download
     }
     
-    // Baixar Boleto (com delay se também houver NF para evitar bloqueio do navegador)
+    // 2. Baixar Boleto (segundo)
     if (hasBoleto) {
         const downloadBoleto = () => {
             const file = boletoFile.files[0];
@@ -410,13 +499,25 @@ convertBtn.addEventListener('click', async () => {
             showMessage(`Boleto baixado: ${nomeArquivo}`, 'success');
         };
         
-        // Se também baixou NF (PDF ou XML), adicionar delay de 500ms para o boleto
-        if (hasNF || hasNFXml) {
-            const delay = hasNF && hasNFXml ? 1000 : 500; // Se tem PDF e XML, esperar mais
-            setTimeout(downloadBoleto, delay);
-        } else {
-            downloadBoleto();
-        }
+        setTimeout(downloadBoleto, delayAcumulado);
+        delayAcumulado += 600; // Incrementar delay para próximo download
+    }
+    
+    // 3. Baixar NF XML (terceiro e último)
+    if (hasNFXml) {
+        const downloadNFXml = () => {
+            const file = nfXmlFile.files[0];
+            const numero = nfNumero.value.trim();
+            const dataCompetencia = nfDataEmissao.value.trim().replace(/\//g, '.');
+            const competencia = formatarCompetencia(nfCompetencia.value);
+            const valor = formatarValor(nfValor.value);
+            
+            const nomeArquivo = `${valor} - NF Nº ${numero} ${dataCompetencia} - Ref ${competencia}.xml`;
+            downloadFile(file, nomeArquivo);
+            showMessage(`Nota Fiscal XML baixada: ${nomeArquivo}`, 'success');
+        };
+        
+        setTimeout(downloadNFXml, delayAcumulado);
     }
 });
 

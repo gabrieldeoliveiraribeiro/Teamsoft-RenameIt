@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teamsoft RenameIt - Renomeador de Notas Fiscais e Boletos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 Teamsoft RenameIt</h1>
+        <p class="subtitle">Renomeie suas notas fiscais e boletos no formato padrão Teamsoft</p>
+
+        <div class="form-container">
+            <!-- Seção Nota Fiscal -->
+            <section class="section">
+                <h2>📄 Nota Fiscal</h2>
+                <div class="file-input-wrapper">
+                    <label for="nfFile">PDF da NF:</label>
+                    <input type="file" id="nfFile" accept=".pdf" />
+                    <small class="hint">Não é necessário colocar o pdf se não quiser, basta preencher as informações que o preview gerará o nome do arquivo.</small>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nfNumero">Número da NF:</label>
+                        <input type="number" id="nfNumero" placeholder="Ex: 24" min="1" step="1" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nfDataEmissao">Data de emissão (dd/mm/aaaa):</label>
+                        <input type="text" id="nfDataEmissao" placeholder="Ex: 31/10/2025" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nfCompetencia">Data da competência:</label>
+                        <input type="text" id="nfCompetencia" placeholder="Ex: set/25" />
+                        <small class="hint">Preenchido automaticamente (mês anterior), mas pode ser editado</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nfValor">Valor:</label>
+                        <input type="text" id="nfValor" placeholder="Ex: 1000,00" />
+                        <small class="hint">Formato: vírgula e duas casas decimais</small>
+                    </div>
+                </div>
+                
+                <div class="preview">
+                    <strong>Nome do arquivo:</strong>
+                    <div id="nfPreview" class="preview-text">-</div>
+                </div>
+            </section>
+
+            <!-- Seção Boleto -->
+            <section class="section">
+                <h2>💰 Boleto</h2>
+                <div class="file-input-wrapper">
+                    <label for="boletoFile">PDF do boleto:</label>
+                    <input type="file" id="boletoFile" accept=".pdf" />
+                    <small class="hint">Não é necessário colocar o pdf se não quiser, basta preencher as informações que o preview gerará o nome do arquivo.</small>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="boletoCompetencia">Data da competência:</label>
+                        <input type="text" id="boletoCompetencia" placeholder="Ex: set/25" />
+                        <small class="hint">Replica da NF, mas pode ser editado</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="boletoVencimento">Data de vencimento (dd/mm/aaaa):</label>
+                        <input type="text" id="boletoVencimento" placeholder="Ex: 08/11/2025" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="boletoValor">Valor:</label>
+                        <input type="text" id="boletoValor" placeholder="Ex: 1000,00" />
+                        <small class="hint">Formato: vírgula e duas casas decimais</small>
+                    </div>
+                </div>
+                
+                <div class="preview">
+                    <strong>Nome do arquivo:</strong>
+                    <div id="boletoPreview" class="preview-text">-</div>
+                </div>
+            </section>
+
+            <!-- Botão Converter -->
+            <div class="button-container">
+                <button id="convertBtn" class="convert-btn">🔄 Converter e Baixar</button>
+                <small class="hint" style="display: block; margin-top: 10px; text-align: center;">Para baixar o arquivo renomeado, é necessário selecionar os PDF's correspondentes nos campos acima.</small>
+            </div>
+
+            <!-- Mensagens de resultado -->
+            <div id="messages" class="messages"></div>
+        </div>
+        
+        <div class="footer">
+            <p>Desenvolvido por: Gabriel Ribeiro</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

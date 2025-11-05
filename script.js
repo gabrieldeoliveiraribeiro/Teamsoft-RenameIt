@@ -6,6 +6,7 @@ const meses = {
 
 // Elementos do DOM
 const nfFile = document.getElementById('nfFile');
+const nfXmlFile = document.getElementById('nfXmlFile');
 const boletoFile = document.getElementById('boletoFile');
 const nfNumero = document.getElementById('nfNumero');
 const nfDataEmissao = document.getElementById('nfDataEmissao');
@@ -200,6 +201,10 @@ nfFile.addEventListener('change', () => {
     updateNFPreview();
 });
 
+nfXmlFile.addEventListener('change', () => {
+    updateNFPreview();
+});
+
 // Atualizar preview do boleto quando arquivo for selecionado
 boletoFile.addEventListener('change', () => {
     updateBoletoPreview();
@@ -304,9 +309,8 @@ function clearMessages() {
 
 // Validar campos
 function validateNF() {
-    if (!nfFile.files[0]) {
-        showMessage('Por favor, selecione um arquivo PDF da NF.', 'error');
-        return false;
+    if (!nfFile.files[0] && !nfXmlFile.files[0]) {
+        // Não exige arquivo, apenas os campos
     }
     
     if (!nfNumero.value.trim() || !nfDataEmissao.value.trim() || !nfCompetencia.value.trim() || !nfValor.value.trim()) {
@@ -336,12 +340,15 @@ convertBtn.addEventListener('click', async () => {
     clearMessages();
     
     let hasNF = false;
+    let hasNFXml = false;
     let hasBoleto = false;
     
-    // Processar NF
-    if (nfFile.files[0]) {
+    // Validar campos da NF se houver campos preenchidos ou arquivos
+    const hasNFData = nfNumero.value.trim() || nfDataEmissao.value.trim() || nfCompetencia.value.trim() || nfValor.value.trim();
+    if (hasNFData || nfFile.files[0] || nfXmlFile.files[0]) {
         if (!validateNF()) return;
-        hasNF = true;
+        if (nfFile.files[0]) hasNF = true;
+        if (nfXmlFile.files[0]) hasNFXml = true;
     }
     
     // Processar Boleto
@@ -350,12 +357,12 @@ convertBtn.addEventListener('click', async () => {
         hasBoleto = true;
     }
     
-    if (!hasNF && !hasBoleto) {
-        showMessage('Por favor, selecione pelo menos um arquivo (NF ou Boleto).', 'error');
+    if (!hasNF && !hasNFXml && !hasBoleto) {
+        showMessage('Por favor, selecione pelo menos um arquivo (NF ou Boleto) ou preencha apenas os campos para gerar o preview.', 'error');
         return;
     }
     
-    // Baixar NF
+    // Baixar NF PDF
     if (hasNF) {
         const file = nfFile.files[0];
         const numero = nfNumero.value.trim();
@@ -365,7 +372,29 @@ convertBtn.addEventListener('click', async () => {
         
         const nomeArquivo = `${valor} - NF Nº ${numero} ${dataEmissao} - Ref ${competencia}.pdf`;
         downloadFile(file, nomeArquivo);
-        showMessage(`Nota Fiscal baixada: ${nomeArquivo}`, 'success');
+        showMessage(`Nota Fiscal PDF baixada: ${nomeArquivo}`, 'success');
+    }
+    
+    // Baixar NF XML (com delay se também houver PDF)
+    if (hasNFXml) {
+        const downloadNFXml = () => {
+            const file = nfXmlFile.files[0];
+            const numero = nfNumero.value.trim();
+            const dataEmissao = nfDataEmissao.value.trim().replace(/\//g, '.');
+            const competencia = formatarCompetencia(nfCompetencia.value);
+            const valor = formatarValor(nfValor.value);
+            
+            const nomeArquivo = `${valor} - NF Nº ${numero} ${dataEmissao} - Ref ${competencia}.xml`;
+            downloadFile(file, nomeArquivo);
+            showMessage(`Nota Fiscal XML baixada: ${nomeArquivo}`, 'success');
+        };
+        
+        // Se também baixou PDF, adicionar delay de 500ms
+        if (hasNF) {
+            setTimeout(downloadNFXml, 500);
+        } else {
+            downloadNFXml();
+        }
     }
     
     // Baixar Boleto (com delay se também houver NF para evitar bloqueio do navegador)
@@ -381,9 +410,10 @@ convertBtn.addEventListener('click', async () => {
             showMessage(`Boleto baixado: ${nomeArquivo}`, 'success');
         };
         
-        // Se também baixou NF, adicionar delay de 500ms para o boleto
-        if (hasNF) {
-            setTimeout(downloadBoleto, 500);
+        // Se também baixou NF (PDF ou XML), adicionar delay de 500ms para o boleto
+        if (hasNF || hasNFXml) {
+            const delay = hasNF && hasNFXml ? 1000 : 500; // Se tem PDF e XML, esperar mais
+            setTimeout(downloadBoleto, delay);
         } else {
             downloadBoleto();
         }

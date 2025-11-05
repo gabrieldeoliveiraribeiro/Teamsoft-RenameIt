@@ -13,6 +13,11 @@
     <div class="container">
         <h1>🏢 Teamsoft RenameIt</h1>
         <p class="subtitle">Renomeie suas notas fiscais e boletos no formato padrão Teamsoft</p>
+        
+        <div class="info-hint">
+            <p>• Seus arquivos PDF's não serão enviados para o servidor, tudo ocorre no seu dispositivo</p>
+            <p>• Se preferir, não é necessário enviar os arquivos, basta preencher as informações e o sistema gerará um preview para que você possa copiar o nome e colocar no seu arquivo.</p>
+        </div>
 
         <div class="form-container">
             <!-- Seção Nota Fiscal -->
@@ -21,7 +26,11 @@
                 <div class="file-input-wrapper">
                     <label for="nfFile">PDF da NF:</label>
                     <input type="file" id="nfFile" accept=".pdf" />
-                    <small class="hint">Não é necessário colocar o pdf se não quiser, basta preencher as informações que o preview gerará o nome do arquivo.</small>
+                </div>
+                
+                <div class="file-input-wrapper">
+                    <label for="nfXmlFile">XML da NF:</label>
+                    <input type="file" id="nfXmlFile" accept=".xml" />
                 </div>
                 
                 <div class="form-grid">
@@ -60,7 +69,6 @@
                 <div class="file-input-wrapper">
                     <label for="boletoFile">PDF do boleto:</label>
                     <input type="file" id="boletoFile" accept=".pdf" />
-                    <small class="hint">Não é necessário colocar o pdf se não quiser, basta preencher as informações que o preview gerará o nome do arquivo.</small>
                 </div>
                 
                 <div class="form-grid">

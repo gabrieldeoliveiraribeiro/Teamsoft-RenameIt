@@ -31,8 +31,27 @@ h1 {
 .subtitle {
     text-align: center;
     color: #666;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     font-size: 1.1em;
+}
+
+.info-hint {
+    background: #fff9f0;
+    border-left: 3px solid #ffa500;
+    padding: 15px 20px;
+    margin-bottom: 30px;
+    border-radius: 4px;
+}
+
+.info-hint p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
+}
+
+.info-hint p:first-child {
+    margin-bottom: 8px;
 }
 
 .form-container {
